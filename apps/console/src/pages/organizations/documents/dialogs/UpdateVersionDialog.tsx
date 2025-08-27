@@ -6,19 +6,21 @@ import {
   DialogContent,
   DialogFooter,
   Spinner,
-  Textarea,
   useDialogRef,
   useToast,
 } from "@probo/ui";
-import { type RefObject } from "react";
-import { graphql } from "relay-runtime";
+import "@toast-ui/editor/dist/toastui-editor.css";
+import { Editor } from "@toast-ui/react-editor";
+import { createRef, type RefObject } from "react";
 import { useMutation } from "react-relay";
+import { graphql } from "relay-runtime";
+import { z } from "zod";
+import type { DocumentDetailPageDocumentFragment$data } from "../__generated__/DocumentDetailPageDocumentFragment.graphql";
 import type { UpdateVersionDialogCreateMutation } from "./__generated__/UpdateVersionDialogCreateMutation.graphql";
 import type { UpdateVersionDialogUpdateMutation } from "./__generated__/UpdateVersionDialogUpdateMutation.graphql";
-import { z } from "zod";
 import { useFormWithSchema } from "/hooks/useFormWithSchema";
 import { useMutationWithToasts } from "/hooks/useMutationWithToasts";
-import type { DocumentDetailPageDocumentFragment$data } from "../__generated__/DocumentDetailPageDocumentFragment.graphql";
+import { Controller } from "react-hook-form";
 
 const createDraftDocument = graphql`
   mutation UpdateVersionDialogCreateMutation(
@@ -92,11 +94,13 @@ export default function UpdateVersionDialog({
         errorMessage: __("Failed to update document. Please try again."),
       }
     );
-  const { handleSubmit, register } = useFormWithSchema(versionSchema, {
+  const { handleSubmit, control } = useFormWithSchema(versionSchema, {
     defaultValues: {
       content: version.content,
     },
   });
+
+  const editorRef = createRef<Editor | null>();
 
   ref.current = {
     open: () => {
@@ -140,7 +144,9 @@ export default function UpdateVersionDialog({
             return;
           }
 
-          const newVersionId = createResponse?.createDraftDocumentVersion?.documentVersionEdge?.node?.id;
+          const newVersionId =
+            createResponse?.createDraftDocumentVersion?.documentVersionEdge
+              ?.node?.id;
           if (newVersionId && data.content !== version.content) {
             updateDocumentVersion({
               variables: {
@@ -170,15 +176,20 @@ export default function UpdateVersionDialog({
     >
       <form onSubmit={onSubmit}>
         <DialogContent>
-          <Textarea
-            id="content"
-            variant="ghost"
-            autogrow
-            required
-            placeholder={__("Add description")}
-            aria-label={__("Description")}
-            className="p-6"
-            {...register("content")}
+          <Controller
+            control={control}
+            name="content"
+            render={({field}) => (
+              <Editor
+                initialValue={field.value || ""}
+                previewStyle="vertical"
+                height="55vh"
+                initialEditType="wysiwyg"
+                useCommandShortcut={true}
+                ref={editorRef}
+                onChange={() => field.onChange(editorRef.current?.getInstance().getMarkdown() || "")}
+              />
+            )}
           />
         </DialogContent>
         <DialogFooter>
