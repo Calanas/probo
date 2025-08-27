@@ -10,8 +10,9 @@ import {
   useToast,
 } from "@probo/ui";
 import "@toast-ui/editor/dist/toastui-editor.css";
+import "@toast-ui/editor/dist/theme/toastui-editor-dark.css";
 import { Editor } from "@toast-ui/react-editor";
-import { createRef, type RefObject } from "react";
+import { createRef, useEffect, useState, type RefObject } from "react";
 import { useMutation } from "react-relay";
 import { graphql } from "relay-runtime";
 import { z } from "zod";
@@ -169,6 +170,24 @@ export default function UpdateVersionDialog({
 
   const isLoading = isCreatingDraft || isUpdating;
 
+  function useSystemTheme() {
+    const [isDark, setIsDark] = useState(
+      () => window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
+
+    useEffect(() => {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = (e: MediaQueryListEvent) => setIsDark(e.matches);
+
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }, []);
+
+    return isDark;
+  }
+
+  const isDarkTheme = useSystemTheme();
+
   return (
     <Dialog
       ref={dialogRef}
@@ -179,15 +198,20 @@ export default function UpdateVersionDialog({
           <Controller
             control={control}
             name="content"
-            render={({field}) => (
+            render={({ field }) => (
               <Editor
+                theme={isDarkTheme ? "dark" : "light"}
                 initialValue={field.value || ""}
-                previewStyle="vertical"
+                previewStyle="tab"
                 height="55vh"
                 initialEditType="wysiwyg"
                 useCommandShortcut={true}
                 ref={editorRef}
-                onChange={() => field.onChange(editorRef.current?.getInstance().getMarkdown() || "")}
+                onChange={() =>
+                  field.onChange(
+                    editorRef.current?.getInstance().getMarkdown() || ""
+                  )
+                }
               />
             )}
           />
